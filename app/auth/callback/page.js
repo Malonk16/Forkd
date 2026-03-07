@@ -1,19 +1,24 @@
 'use client';
 import { useEffect } from 'react';
 
+export const dynamic = 'force-dynamic';
+
 export default function AuthCallback() {
   useEffect(() => {
-    const { createClient } = require('@supabase/supabase-js');
-    const supabase = createClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL,
-      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
-    );
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
-      if (event === 'SIGNED_IN' && session) {
-        window.location.href = '/';
-      }
-    });
-    return () => subscription.unsubscribe();
+    const initSupabase = async () => {
+      const { createClient } = await import('@supabase/supabase-js');
+      const supabase = createClient(
+        process.env.NEXT_PUBLIC_SUPABASE_URL,
+        process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
+      );
+      const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+        if (event === 'SIGNED_IN' && session) {
+          window.location.href = '/';
+        }
+      });
+      return () => subscription.unsubscribe();
+    };
+    initSupabase();
   }, []);
 
   return (
