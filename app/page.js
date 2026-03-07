@@ -177,7 +177,6 @@ function AddRecipeView({ onSave, onCancel, session }) {
   const handleSave = async () => {
     if (!form.title) return;
     setSaving(true);
-
     let image_url = null;
     if (imageFile && session) {
       setUploadingImage(true);
@@ -190,7 +189,6 @@ function AddRecipeView({ onSave, onCancel, session }) {
       }
       setUploadingImage(false);
     }
-
     const platform = form.source_url ? detectPlatform(form.source_url) : 'Manual';
     await onSave({ ...form, source_platform: platform, image_url, ingredients: form.ingredients.filter(i => i.name) });
     setSaving(false);
@@ -206,7 +204,6 @@ function AddRecipeView({ onSave, onCancel, session }) {
         <button onClick={onCancel} style={{ background: 'transparent', border: '1px solid #D4CDB8', color: '#8A8070', padding: '8px 16px', fontSize: 13, cursor: 'pointer', fontFamily: 'inherit' }}>Cancel</button>
       </div>
 
-      {/* AI EXTRACTION */}
       <div style={{ background: '#EDE8DC', border: '1px solid #D4CDB8', padding: '20px', marginBottom: 28 }}>
         <label style={labelStyle}>Paste Caption from TikTok or Instagram</label>
         <textarea value={caption} onChange={e => setCaption(e.target.value)}
@@ -218,7 +215,6 @@ function AddRecipeView({ onSave, onCancel, session }) {
         </button>
       </div>
 
-      {/* IMAGE UPLOAD */}
       <div style={{ marginBottom: 20 }}>
         <label style={labelStyle}>Recipe Photo (optional)</label>
         <div onClick={() => fileRef.current.click()}
@@ -345,10 +341,19 @@ export default function App() {
 
   useEffect(() => {
     const init = async () => {
+      // Handle OAuth code exchange
+      const params = new URLSearchParams(window.location.search);
+      const code = params.get('code');
+      if (code) {
+        await supabase.auth.exchangeCodeForSession(code);
+        window.history.replaceState({}, '', '/');
+      }
+
       const { data: { session } } = await supabase.auth.getSession();
       if (!session) { window.location.href = '/login'; return; }
       setSession(session);
       setAuthChecked(true);
+
       try {
         const { data } = await supabase.from('recipes').select('*').eq('user_id', session.user.id).order('created_at', { ascending: false });
         if (data && data.length > 0) { setRecipes(data); }
@@ -398,7 +403,6 @@ export default function App() {
     <div style={{ minHeight: '100vh', background: '#F5F0E8', fontFamily: '-apple-system, BlinkMacSystemFont, "SF Pro Text", sans-serif' }}>
       <Sidebar open={sidebarOpen} onClose={() => setSidebarOpen(false)} active={view} onNavigate={setView} />
 
-      {/* TOP BAR */}
       <div style={{ position: 'sticky', top: 0, background: '#F5F0E8', borderBottom: '1px solid #D4CDB8', padding: '0 32px', height: 56, display: 'flex', alignItems: 'center', justifyContent: 'space-between', zIndex: 30 }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 20 }}>
           <button onClick={() => setSidebarOpen(true)} style={{ background: 'transparent', border: 'none', cursor: 'pointer', padding: 4, display: 'flex', flexDirection: 'column', gap: 4 }}>
@@ -420,15 +424,12 @@ export default function App() {
         </button>
       </div>
 
-      {/* MAIN */}
       <div style={{ padding: '40px 32px', maxWidth: 1200, margin: '0 auto' }}>
         {view === 'cookbook' && (
           <>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', marginBottom: 32 }}>
-              <div>
-                <div style={{ fontSize: 13, color: '#8A8070', marginBottom: 6 }}>{filtered.length} recipes</div>
-                <h1 style={{ fontSize: 32, fontWeight: 700, color: '#1A1A1A', letterSpacing: -1 }}>Cookbook</h1>
-              </div>
+            <div style={{ marginBottom: 32 }}>
+              <div style={{ fontSize: 13, color: '#8A8070', marginBottom: 6 }}>{filtered.length} recipes</div>
+              <h1 style={{ fontSize: 32, fontWeight: 700, color: '#1A1A1A', letterSpacing: -1 }}>Cookbook</h1>
             </div>
             {usingDemo && (
               <div style={{ padding: '12px 16px', background: '#EDE8DC', borderLeft: '2px solid #D4CDB8', marginBottom: 28, fontSize: 13, color: '#8A8070' }}>
