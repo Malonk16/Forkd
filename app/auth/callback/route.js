@@ -1,3 +1,4 @@
+// auth callback route handler
 import { NextResponse } from 'next/server';
 
 export async function GET(request) {
