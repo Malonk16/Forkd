@@ -342,20 +342,26 @@ export default function App() {
   useEffect(() => {
     const init = async () => {
       // Handle OAuth code exchange
-      const params = new URLSearchParams(window.location.search);
-      const code = params.get('code');
-      if (code) {
-        await supabase.auth.exchangeCodeForSession(code);
-        window.history.replaceState({}, '', '/');
+      if (typeof window !== 'undefined') {
+        const params = new URLSearchParams(window.location.search);
+        const code = params.get('code');
+        if (code) {
+          try {
+            await supabase.auth.exchangeCodeForSession(code);
+          } catch (e) {
+            console.error('Code exchange error:', e);
+          }
+          window.history.replaceState({}, '', '/');
+        }
       }
 
-      const { data: { session } } = await supabase.auth.getSession();
-      if (!session) { window.location.href = '/login'; return; }
-      setSession(session);
+      const { data: { session: currentSession } } = await supabase.auth.getSession();
+      if (!currentSession) { window.location.href = '/login'; return; }
+      setSession(currentSession);
       setAuthChecked(true);
 
       try {
-        const { data } = await supabase.from('recipes').select('*').eq('user_id', session.user.id).order('created_at', { ascending: false });
+        const { data } = await supabase.from('recipes').select('*').eq('user_id', currentSession.user.id).order('created_at', { ascending: false });
         if (data && data.length > 0) { setRecipes(data); }
         else { setRecipes(SAMPLE_RECIPES); setUsingDemo(true); }
       } catch (e) { setRecipes(SAMPLE_RECIPES); setUsingDemo(true); }
