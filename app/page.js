@@ -5,6 +5,18 @@ export default function LandingPage() {
   const [scrolled, setScrolled] = useState(false);
   const [visibleSections, setVisibleSections] = useState(new Set());
 
+  // Catch OAuth redirects that land on the landing page and forward to /app
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const hash = window.location.hash;
+      const search = window.location.search;
+      if (hash.includes('access_token') || search.includes('code=')) {
+        window.location.replace('/app' + search + hash);
+        return;
+      }
+    }
+  }, []);
+
   useEffect(() => {
     const handleScroll = () => setScrolled(window.scrollY > 40);
     window.addEventListener('scroll', handleScroll);
