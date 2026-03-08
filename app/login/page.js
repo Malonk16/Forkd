@@ -8,7 +8,7 @@ const supabase = createClient(
 );
 
 export default function LoginPage() {
-  const [mode, setMode] = useState('login'); // 'login' | 'signup'
+  const [mode, setMode] = useState('login');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
@@ -20,11 +20,16 @@ export default function LoginPage() {
     setLoading(true);
     setError('');
     setMessage('');
+    if (mode === 'signup') {
+      if (password.length < 8) { setError('Password must be at least 8 characters.'); setLoading(false); return; }
+      if (!/[A-Z]/.test(password)) { setError('Password must contain at least one uppercase letter.'); setLoading(false); return; }
+      if (!/[0-9]/.test(password)) { setError('Password must contain at least one number.'); setLoading(false); return; }
+    }
 
     if (mode === 'login') {
       const { error } = await supabase.auth.signInWithPassword({ email, password });
       if (error) { setError(error.message); }
-      else { window.location.href = '/'; }
+      else { window.location.href = '/app'; }
     } else {
       const { error } = await supabase.auth.signUp({ email, password });
       if (error) { setError(error.message); }
@@ -36,82 +41,29 @@ export default function LoginPage() {
   const handleGoogle = async () => {
     await supabase.auth.signInWithOAuth({
       provider: 'google',
-      options: { redirectTo: `${window.location.origin}/` },
+      options: { redirectTo: `${window.location.origin}/app` },
     });
   };
 
-  const inputStyle = {
-    width: '100%',
-    background: '#EDE8DC',
-    border: '1px solid #D4CDB8',
-    padding: '12px 14px',
-    fontSize: 14,
-    color: '#1A1A1A',
-    outline: 'none',
-    fontFamily: 'inherit',
-    boxSizing: 'border-box',
-  };
+  const inputStyle = { width: '100%', background: '#EDE8DC', border: '1px solid #D4CDB8', padding: '12px 14px', fontSize: 14, color: '#1A1A1A', outline: 'none', fontFamily: 'inherit', boxSizing: 'border-box' };
 
   return (
-    <div style={{
-      minHeight: '100vh',
-      background: '#F5F0E8',
-      display: 'flex',
-      alignItems: 'center',
-      justifyContent: 'center',
-      fontFamily: '-apple-system, BlinkMacSystemFont, "SF Pro Text", sans-serif',
-      padding: 24,
-    }}>
+    <div style={{ minHeight: '100vh', background: '#F5F0E8', display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: '-apple-system, BlinkMacSystemFont, "SF Pro Text", sans-serif', padding: 24 }}>
       <div style={{ width: '100%', maxWidth: 400 }}>
-        {/* Logo */}
         <div style={{ textAlign: 'center', marginBottom: 48 }}>
           <div style={{ fontSize: 32, fontWeight: 700, color: '#1A1A1A', letterSpacing: -1 }}>Forkd</div>
           <div style={{ fontSize: 13, color: '#8A8070', marginTop: 6 }}>Your personal recipe cookbook</div>
         </div>
-
-        {/* Card */}
         <div style={{ background: '#EDE8DC', border: '1px solid #D4CDB8', padding: '32px 28px' }}>
-          {/* Mode Toggle */}
           <div style={{ display: 'flex', marginBottom: 28, borderBottom: '1px solid #D4CDB8' }}>
             {['login', 'signup'].map(m => (
               <button key={m} onClick={() => { setMode(m); setError(''); setMessage(''); }}
-                style={{
-                  flex: 1,
-                  background: 'transparent',
-                  border: 'none',
-                  borderBottom: mode === m ? '2px solid #1A1A1A' : '2px solid transparent',
-                  color: mode === m ? '#1A1A1A' : '#8A8070',
-                  fontSize: 13,
-                  fontWeight: mode === m ? 600 : 400,
-                  cursor: 'pointer',
-                  padding: '0 0 12px',
-                  fontFamily: 'inherit',
-                  textTransform: 'capitalize',
-                  marginBottom: -1,
-                }}>
+                style={{ flex: 1, background: 'transparent', border: 'none', borderBottom: mode === m ? '2px solid #1A1A1A' : '2px solid transparent', color: mode === m ? '#1A1A1A' : '#8A8070', fontSize: 13, fontWeight: mode === m ? 600 : 400, cursor: 'pointer', padding: '0 0 12px', fontFamily: 'inherit', textTransform: 'capitalize', marginBottom: -1 }}>
                 {m === 'login' ? 'Sign In' : 'Create Account'}
               </button>
             ))}
           </div>
-
-          {/* Google */}
-          <button onClick={handleGoogle}
-            style={{
-              width: '100%',
-              background: '#F5F0E8',
-              border: '1px solid #D4CDB8',
-              padding: '11px',
-              fontSize: 13,
-              fontWeight: 600,
-              color: '#1A1A1A',
-              cursor: 'pointer',
-              fontFamily: 'inherit',
-              marginBottom: 20,
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              gap: 8,
-            }}>
+          <button onClick={handleGoogle} style={{ width: '100%', background: '#F5F0E8', border: '1px solid #D4CDB8', padding: '11px', fontSize: 13, fontWeight: 600, color: '#1A1A1A', cursor: 'pointer', fontFamily: 'inherit', marginBottom: 20, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8 }}>
             <svg width="16" height="16" viewBox="0 0 24 24">
               <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
               <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
@@ -120,63 +72,23 @@ export default function LoginPage() {
             </svg>
             Continue with Google
           </button>
-
           <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 20 }}>
             <div style={{ flex: 1, height: 1, background: '#D4CDB8' }} />
             <span style={{ fontSize: 11, color: '#8A8070', textTransform: 'uppercase', letterSpacing: 0.8 }}>or</span>
             <div style={{ flex: 1, height: 1, background: '#D4CDB8' }} />
           </div>
-
-          {/* Email */}
           <div style={{ marginBottom: 12 }}>
             <label style={{ fontSize: 11, color: '#8A8070', textTransform: 'uppercase', letterSpacing: 0.8, marginBottom: 8, display: 'block', fontWeight: 600 }}>Email</label>
-            <input
-              type="email"
-              value={email}
-              onChange={e => setEmail(e.target.value)}
-              placeholder="you@example.com"
-              style={inputStyle}
-              onKeyDown={e => e.key === 'Enter' && handleSubmit()}
-            />
+            <input type="email" value={email} onChange={e => setEmail(e.target.value)} placeholder="you@example.com" style={inputStyle} onKeyDown={e => e.key === 'Enter' && handleSubmit()} />
           </div>
-
-          {/* Password */}
           <div style={{ marginBottom: 20 }}>
             <label style={{ fontSize: 11, color: '#8A8070', textTransform: 'uppercase', letterSpacing: 0.8, marginBottom: 8, display: 'block', fontWeight: 600 }}>Password</label>
-            <input
-              type="password"
-              value={password}
-              onChange={e => setPassword(e.target.value)}
-              placeholder="••••••••"
-              style={inputStyle}
-              onKeyDown={e => e.key === 'Enter' && handleSubmit()}
-            />
+            <input type="password" value={password} onChange={e => setPassword(e.target.value)} placeholder="••••••••" style={inputStyle} onKeyDown={e => e.key === 'Enter' && handleSubmit()} />
           </div>
-
-          {error && (
-            <div style={{ background: '#F5F0E8', border: '1px solid #D4CDB8', borderLeft: '2px solid #1A1A1A', padding: '10px 14px', fontSize: 13, color: '#1A1A1A', marginBottom: 16 }}>
-              {error}
-            </div>
-          )}
-          {message && (
-            <div style={{ background: '#EDE8DC', border: '1px solid #D4CDB8', borderLeft: '2px solid #8A8070', padding: '10px 14px', fontSize: 13, color: '#1A1A1A', marginBottom: 16 }}>
-              {message}
-            </div>
-          )}
-
+          {error && <div style={{ background: '#F5F0E8', border: '1px solid #D4CDB8', borderLeft: '2px solid #1A1A1A', padding: '10px 14px', fontSize: 13, color: '#1A1A1A', marginBottom: 16 }}>{error}</div>}
+          {message && <div style={{ background: '#EDE8DC', border: '1px solid #D4CDB8', borderLeft: '2px solid #8A8070', padding: '10px 14px', fontSize: 13, color: '#1A1A1A', marginBottom: 16 }}>{message}</div>}
           <button onClick={handleSubmit} disabled={loading || !email || !password}
-            style={{
-              width: '100%',
-              padding: '13px',
-              background: loading || !email || !password ? '#8A8070' : '#1A1A1A',
-              border: 'none',
-              color: '#F5F0E8',
-              fontSize: 14,
-              fontWeight: 600,
-              cursor: loading || !email || !password ? 'default' : 'pointer',
-              letterSpacing: 0.2,
-              fontFamily: 'inherit',
-            }}>
+            style={{ width: '100%', padding: '13px', background: loading || !email || !password ? '#8A8070' : '#1A1A1A', border: 'none', color: '#F5F0E8', fontSize: 14, fontWeight: 600, cursor: loading || !email || !password ? 'default' : 'pointer', letterSpacing: 0.2, fontFamily: 'inherit' }}>
             {loading ? 'Please wait...' : mode === 'login' ? 'Sign In' : 'Create Account'}
           </button>
         </div>

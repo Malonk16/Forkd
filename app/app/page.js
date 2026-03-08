@@ -23,6 +23,7 @@ function Sidebar({ open, onClose, active, onNavigate }) {
     { id: 'mealplan', label: 'Meal Plan' },
     { id: 'grocery', label: 'Grocery List' },
     { id: 'add', label: 'Add Recipe' },
+    { id: 'settings', label: 'Settings' },
   ];
   return (
     <>
@@ -40,10 +41,12 @@ function Sidebar({ open, onClose, active, onNavigate }) {
         ))}
         <div style={{ marginTop: 'auto', padding: '0 28px' }}>
           <div style={{ height: 1, background: '#2A2A2A', marginBottom: 20 }} />
-          <button onClick={async () => { await supabase.auth.signOut(); window.location.href = '/login'; }}
-            style={{ background: 'transparent', border: 'none', color: '#555', fontSize: 13, cursor: 'pointer', padding: 0 }}>
-            Sign out
-          </button>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+            <button onClick={async () => { await supabase.auth.signOut(); window.location.href = '/login'; }}
+              style={{ background: 'transparent', border: 'none', color: '#555', fontSize: 13, cursor: 'pointer', padding: 0, textAlign: 'left' }}>
+              Sign out
+            </button>
+          </div>
         </div>
       </div>
     </>
@@ -225,7 +228,7 @@ function RecipeModal({ recipe, onClose, onAddToGrocery, onEdit, onDelete, onNutr
                   setLoadingNutrition(true);
                   setNutrition(null);
                   try {
-                    const res = await fetch('/api/nutrition', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ ingredients: recipe.ingredients, title: recipe.title }) });
+                    const res = await fetch('/api/nutrition', { method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${session?.access_token}` }, body: JSON.stringify({ ingredients: recipe.ingredients, title: recipe.title }) });
                     const data = await res.json();
                     if (data.calories) { setNutrition(data); onNutritionSaved(recipe.id, data); }
                   } catch(e) { console.error(e); }
@@ -238,7 +241,7 @@ function RecipeModal({ recipe, onClose, onAddToGrocery, onEdit, onDelete, onNutr
               <button onClick={async () => {
                 setLoadingNutrition(true);
                 try {
-                  const res = await fetch('/api/nutrition', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ ingredients: recipe.ingredients, title: recipe.title }) });
+                  const res = await fetch('/api/nutrition', { method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${session?.access_token}` }, body: JSON.stringify({ ingredients: recipe.ingredients, title: recipe.title }) });
                   const data = await res.json();
                   if (data.calories) { setNutrition(data); onNutritionSaved(recipe.id, data); }
                 } catch(e) { console.error(e); }
@@ -320,7 +323,7 @@ function AddRecipeView({ onSave, onCancel, session, editRecipe, sharedUrl, onCle
 
       const res = await fetch('/api/extract-screenshot', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${session?.access_token}` },
         body: JSON.stringify({ image: base64, mediaType }),
       });
       const data = await res.json();
@@ -347,7 +350,7 @@ function AddRecipeView({ onSave, onCancel, session, editRecipe, sharedUrl, onCle
     try {
       const res = await fetch('/api/extract-url', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${session?.access_token}` },
         body: JSON.stringify({ url }),
       });
       const data = await res.json();
@@ -388,7 +391,7 @@ function AddRecipeView({ onSave, onCancel, session, editRecipe, sharedUrl, onCle
     try {
       const res = await fetch('/api/extract-ingredients', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${session?.access_token}` },
         body: JSON.stringify({ caption }),
       });
       const data = await res.json();
@@ -934,6 +937,86 @@ function CollectionsView({ collections, recipes, selectedCollection, onSelectCol
   );
 }
 
+
+function SettingsView({ session, onDeleteAccount }) {
+  const [confirmText, setConfirmText] = useState('');
+  const [deleting, setDeleting] = useState(false);
+  const [showConfirm, setShowConfirm] = useState(false);
+  const [error, setError] = useState('');
+
+  const handleDelete = async () => {
+    if (confirmText !== 'DELETE') { setError('Please type DELETE to confirm.'); return; }
+    setDeleting(true);
+    setError('');
+    try {
+      await onDeleteAccount();
+    } catch (e) {
+      setError('Something went wrong. Please try again.');
+      setDeleting(false);
+    }
+  };
+
+  return (
+    <div style={{ maxWidth: 560, margin: '0 auto', padding: '40px 24px' }}>
+      <div style={{ fontSize: 11, color: '#8A8070', textTransform: 'uppercase', letterSpacing: 0.8, fontWeight: 600, marginBottom: 8 }}>Settings</div>
+      <div style={{ fontSize: 24, fontWeight: 700, color: '#1A1A1A', letterSpacing: -0.5, marginBottom: 40 }}>Account</div>
+
+      {/* Account Info */}
+      <div style={{ background: '#EDE8DC', border: '1px solid #D4CDB8', padding: '20px 24px', marginBottom: 2 }}>
+        <div style={{ fontSize: 11, color: '#8A8070', textTransform: 'uppercase', letterSpacing: 0.8, marginBottom: 6 }}>Signed in as</div>
+        <div style={{ fontSize: 14, color: '#1A1A1A', fontWeight: 500 }}>{session?.user?.email}</div>
+      </div>
+
+      <div style={{ background: '#EDE8DC', border: '1px solid #D4CDB8', padding: '20px 24px', marginBottom: 40 }}>
+        <div style={{ fontSize: 11, color: '#8A8070', textTransform: 'uppercase', letterSpacing: 0.8, marginBottom: 6 }}>Account created</div>
+        <div style={{ fontSize: 14, color: '#1A1A1A' }}>{new Date(session?.user?.created_at).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })}</div>
+      </div>
+
+      {/* Danger Zone */}
+      <div style={{ border: '1px solid #D4CDB8' }}>
+        <div style={{ padding: '16px 24px', borderBottom: '1px solid #D4CDB8', background: '#EDE8DC' }}>
+          <div style={{ fontSize: 13, fontWeight: 600, color: '#1A1A1A' }}>Danger Zone</div>
+        </div>
+        <div style={{ padding: '24px' }}>
+          <div style={{ fontSize: 14, color: '#1A1A1A', fontWeight: 600, marginBottom: 6 }}>Delete Account</div>
+          <div style={{ fontSize: 13, color: '#8A8070', lineHeight: 1.6, marginBottom: 20 }}>
+            This will permanently delete your account and all associated data including recipes, meal plans, grocery lists, collections, and favorites. This action cannot be undone.
+          </div>
+          {!showConfirm ? (
+            <button onClick={() => setShowConfirm(true)}
+              style={{ background: 'transparent', border: '1px solid #D4CDB8', color: '#8A8070', padding: '10px 20px', fontSize: 13, cursor: 'pointer', fontFamily: 'inherit', fontWeight: 500 }}>
+              Delete my account
+            </button>
+          ) : (
+            <div>
+              <div style={{ fontSize: 13, color: '#1A1A1A', marginBottom: 10, fontWeight: 500 }}>
+                Type <strong>DELETE</strong> to confirm:
+              </div>
+              <input
+                value={confirmText}
+                onChange={e => { setConfirmText(e.target.value); setError(''); }}
+                placeholder="DELETE"
+                style={{ width: '100%', background: '#F5F0E8', border: '1px solid #D4CDB8', padding: '10px 14px', fontSize: 14, color: '#1A1A1A', outline: 'none', fontFamily: 'inherit', boxSizing: 'border-box', marginBottom: 12 }}
+              />
+              {error && <div style={{ fontSize: 13, color: '#c0392b', marginBottom: 12 }}>{error}</div>}
+              <div style={{ display: 'flex', gap: 10 }}>
+                <button onClick={handleDelete} disabled={deleting}
+                  style={{ background: '#1A1A1A', border: 'none', color: '#F5F0E8', padding: '10px 20px', fontSize: 13, cursor: deleting ? 'default' : 'pointer', fontFamily: 'inherit', fontWeight: 600, opacity: deleting ? 0.6 : 1 }}>
+                  {deleting ? 'Deleting...' : 'Permanently delete'}
+                </button>
+                <button onClick={() => { setShowConfirm(false); setConfirmText(''); setError(''); }}
+                  style={{ background: 'transparent', border: '1px solid #D4CDB8', color: '#8A8070', padding: '10px 20px', fontSize: 13, cursor: 'pointer', fontFamily: 'inherit' }}>
+                  Cancel
+                </button>
+              </div>
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export default function App() {
   const [authChecked, setAuthChecked] = useState(false);
   const [sidebarOpen, setSidebarOpen] = useState(false);
@@ -1301,6 +1384,29 @@ export default function App() {
     await supabase.from('grocery_items').update({ checked }).eq('id', id);
   };
 
+  const handleDeleteAccount = async () => {
+    const { data: { session: s } } = await supabase.auth.getSession();
+    if (!s) return;
+    const uid = s.user.id;
+    // Delete all user data in order (respecting foreign keys)
+    await supabase.from('collection_recipes').delete().in('collection_id',
+      (await supabase.from('collections').select('id').eq('user_id', uid)).data?.map(c => c.id) || []
+    );
+    await supabase.from('collections').delete().eq('user_id', uid);
+    await supabase.from('favorites').delete().eq('user_id', uid);
+    await supabase.from('meal_plan').delete().eq('user_id', uid);
+    await supabase.from('grocery_items').delete().eq('user_id', uid);
+    await supabase.from('recipes').delete().eq('user_id', uid);
+    await supabase.from('profiles').delete().eq('id', uid);
+    // Delete auth account via API
+    await fetch('/api/delete-account', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${s.access_token}` },
+    });
+    await supabase.auth.signOut();
+    window.location.href = '/';
+  };
+
   const handleClearGrocery = async () => {
     if (!session) return;
     await supabase.from('grocery_items').delete().eq('user_id', session.user.id);
@@ -1453,6 +1559,7 @@ export default function App() {
         {view === 'add' && <AddRecipeView onSave={handleSaveRecipe} onCancel={() => { setEditingRecipe(null); setView('cookbook'); }} session={session} editRecipe={editingRecipe} sharedUrl={sharedUrl} onClearSharedUrl={() => setSharedUrl('')} />}
         {view === 'mealplan' && <MealPlanView recipes={recipes} mealPlan={mealPlan} onAssign={handleAddToMealPlan} onAddWeekToGrocery={handleAddWeekToGrocery} onAddMealToGrocery={(recipe) => handleAddToGrocery(recipe, false)} onRemoveMealFromGrocery={handleRemoveRecipeFromGrocery} groceryItems={groceryItems} weekOffset={weekOffset} setWeekOffset={setWeekOffset} />}
         {view === 'grocery' && <GroceryView items={groceryItems} onClear={handleClearGrocery} onToggle={handleToggleGroceryItem} />}
+        {view === 'settings' && <SettingsView session={session} onDeleteAccount={handleDeleteAccount} />}
       </div>
 
       {/* Welcome Modal */}
