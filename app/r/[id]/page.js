@@ -1,6 +1,7 @@
 'use client';
 import { useEffect, useState } from 'react';
 import { createClient } from '@supabase/supabase-js';
+import { use } from 'react';
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL,
@@ -8,6 +9,7 @@ const supabase = createClient(
 );
 
 export default function SharedRecipePage({ params }) {
+  const { id } = use(params);
   const [recipe, setRecipe] = useState(null);
   const [loading, setLoading] = useState(true);
   const [notFound, setNotFound] = useState(false);
@@ -17,14 +19,14 @@ export default function SharedRecipePage({ params }) {
       const { data } = await supabase
         .from('recipes')
         .select('*')
-        .eq('id', params.id)
+        .eq('id', id)
         .single();
       if (data) setRecipe(data);
       else setNotFound(true);
       setLoading(false);
     };
     load();
-  }, [params.id]);
+  }, [id]);
 
   const s = { fontFamily: '-apple-system, BlinkMacSystemFont, "SF Pro Text", sans-serif' };
 
@@ -33,7 +35,6 @@ export default function SharedRecipePage({ params }) {
 
   return (
     <div style={{ ...s, minHeight: '100vh', background: '#F5F0E8' }}>
-      {/* Header */}
       <div style={{ borderBottom: '1px solid #D4CDB8', padding: '0 24px', height: 52, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
         <div style={{ fontSize: 16, fontWeight: 700, color: '#1A1A1A', letterSpacing: -0.3 }}>Forkd</div>
         <a href="/login" style={{ background: '#1A1A1A', color: '#F5F0E8', padding: '7px 16px', fontSize: 13, fontWeight: 600, textDecoration: 'none' }}>
@@ -68,7 +69,6 @@ export default function SharedRecipePage({ params }) {
           </div>
         )}
 
-        {/* CTA */}
         <div style={{ background: '#1A1A1A', padding: '28px 24px', textAlign: 'center', marginTop: 40 }}>
           <div style={{ fontSize: 16, fontWeight: 700, color: '#F5F0E8', marginBottom: 8 }}>Save this recipe to your Forkd cookbook</div>
           <div style={{ fontSize: 13, color: '#8A8070', marginBottom: 20 }}>Plan meals, build grocery lists, and organize recipes from TikTok & Instagram.</div>

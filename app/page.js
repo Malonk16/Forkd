@@ -149,7 +149,7 @@ function RecipeModal({ recipe, onClose, onAddToGrocery, onEdit, onDelete, onNutr
             <button onClick={async () => {
               const shareUrl = `${window.location.origin}/r/${recipe.share_id || recipe.id}`;
               if (navigator.share) {
-                navigator.share({ title: recipe.title, url: shareUrl });
+                try { await navigator.share({ title: recipe.title, url: shareUrl }); } catch (e) { /* user cancelled */ }
               } else {
                 await navigator.clipboard.writeText(shareUrl);
                 alert('Link copied to clipboard!');
@@ -1434,7 +1434,7 @@ export default function App() {
             onShareCollection={async (collection) => {
               const shareUrl = `${window.location.origin}/c/${collection.id}`;
               if (navigator.share) {
-                navigator.share({ title: collection.name, url: shareUrl });
+                try { await navigator.share({ title: collection.name, url: shareUrl }); } catch (e) { /* user cancelled */ }
               } else {
                 await navigator.clipboard.writeText(shareUrl);
                 alert('Collection link copied!');
