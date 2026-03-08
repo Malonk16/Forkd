@@ -419,7 +419,10 @@ function AddRecipeView({ onSave, onCancel, session, editRecipe, sharedUrl, onCle
       setUploadingImage(false);
     }
     const platform = form.source_url ? detectPlatform(form.source_url) : 'Manual';
-    await onSave({ ...form, source_platform: platform, image_url, ingredients: form.ingredients.filter(i => i.name) }, editRecipe?.id);
+    const cleanIngredients = form.ingredients
+      .filter(i => i && (i.name || '').trim())
+      .map(i => ({ name: (i.name || '').trim(), amount: (i.amount || '').trim() }));
+    await onSave({ ...form, source_platform: platform, image_url, ingredients: cleanIngredients }, editRecipe?.id);
     setSaving(false);
   };
 
@@ -856,8 +859,14 @@ export default function App() {
       // Load recipes
       try {
         const { data } = await supabase.from('recipes').select('*').eq('user_id', currentSession.user.id).order('created_at', { ascending: false });
-        if (data && data.length > 0) { setRecipes(data); }
-        else { setRecipes(SAMPLE_RECIPES); setUsingDemo(true); }
+        if (data && data.length > 0) {
+          setRecipes(data);
+        } else {
+          // Only show demo if user has truly never saved a recipe
+          const { count } = await supabase.from('recipes').select('*', { count: 'exact', head: true }).eq('user_id', currentSession.user.id);
+          if (count === 0) { setRecipes(SAMPLE_RECIPES); setUsingDemo(true); }
+          else { setRecipes([]); }
+        }
       } catch (e) { setRecipes(SAMPLE_RECIPES); setUsingDemo(true); }
 
       // Load grocery items
@@ -1066,7 +1075,12 @@ export default function App() {
 
   const handleDeleteRecipe = async (id) => {
     await supabase.from('recipes').delete().eq('id', id);
-    setRecipes(prev => prev.filter(r => r.id !== id));
+    setRecipes(prev => {
+      const updated = prev.filter(r => r.id !== id);
+      // Never fall back to sample recipes after a real delete
+      return updated;
+    });
+    setUsingDemo(false);
   };
 
   const handleAddToGrocery = async (recipe, redirect = true) => {
