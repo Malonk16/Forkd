@@ -282,6 +282,8 @@ function AddRecipeView({ onSave, onCancel, session, editRecipe, sharedUrl, onCle
   const [extractError, setExtractError] = useState('');
   const [extractingUrl, setExtractingUrl] = useState(false);
   const fileRef = useRef();
+  const screenshotRef = useRef();
+  const [extractingScreenshot, setExtractingScreenshot] = useState(false);
 
   // Auto-extract when a sharedUrl is passed in
   useEffect(() => {
@@ -289,6 +291,43 @@ function AddRecipeView({ onSave, onCancel, session, editRecipe, sharedUrl, onCle
       handleExtractFromUrl(sharedUrl);
     }
   }, [sharedUrl]);
+
+  const handleExtractFromScreenshot = async (file) => {
+    if (!file) return;
+    setExtractingScreenshot(true);
+    setExtractError('');
+    try {
+      // Convert image to base64
+      const base64 = await new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = () => resolve(reader.result.split(',')[1]);
+        reader.onerror = reject;
+        reader.readAsDataURL(file);
+      });
+      const mediaType = file.type || 'image/jpeg';
+
+      const res = await fetch('/api/extract-screenshot', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ image: base64, mediaType }),
+      });
+      const data = await res.json();
+      if (data.error) {
+        setExtractError('Could not find a recipe in this screenshot. Try a clearer image of the caption.');
+      } else if (data.title || data.ingredients) {
+        setForm(f => ({
+          ...f,
+          title: data.title || f.title,
+          ingredients: data.ingredients?.length ? data.ingredients : f.ingredients,
+          instructions: data.instructions || f.instructions,
+        }));
+      }
+    } catch (e) {
+      setExtractError('Failed to read screenshot.');
+      console.error(e);
+    }
+    setExtractingScreenshot(false);
+  };
 
   const handleExtractFromUrl = async (url) => {
     setExtractingUrl(true);
@@ -399,18 +438,49 @@ function AddRecipeView({ onSave, onCancel, session, editRecipe, sharedUrl, onCle
         <button onClick={onCancel} style={{ background: 'transparent', border: '1px solid #D4CDB8', color: '#8A8070', padding: '8px 16px', fontSize: 13, cursor: 'pointer', fontFamily: 'inherit' }}>Cancel</button>
       </div>
 
-      <div style={{ background: '#EDE8DC', border: '1px solid #D4CDB8', padding: '20px', marginBottom: 28 }}>
-        <label style={labelStyle}>Paste Caption from TikTok or Instagram</label>
-        <textarea value={caption} onChange={e => setCaption(e.target.value)}
-          placeholder="Paste the recipe caption here and AI will extract the ingredients automatically..."
-          rows={4} style={{ ...inputStyle, resize: 'vertical', lineHeight: 1.6, marginBottom: 12 }} />
-        {extractError && (
-          <div style={{ fontSize: 13, color: '#8A8070', marginBottom: 10, borderLeft: '2px solid #D4CDB8', paddingLeft: 10 }}>{extractError}</div>
-        )}
-        <button onClick={handleExtract} disabled={extracting || !caption.trim()}
-          style={{ background: extracting || !caption.trim() ? '#B8B0A0' : '#1A1A1A', border: 'none', color: '#F5F0E8', padding: '10px 20px', fontSize: 13, fontWeight: 600, cursor: extracting || !caption.trim() ? 'default' : 'pointer', fontFamily: 'inherit' }}>
-          {extracting ? 'Extracting...' : 'Extract with AI'}
-        </button>
+      <div style={{ background: '#EDE8DC', border: '1px solid #D4CDB8', marginBottom: 28 }}>
+        {/* Tabs */}
+        <div style={{ display: 'flex', borderBottom: '1px solid #D4CDB8' }}>
+          {['caption', 'screenshot'].map(tab => (
+            <button key={tab} onClick={() => setForm(f => ({ ...f, _tab: tab }))}
+              style={{ flex: 1, padding: '12px', background: (form._tab || 'caption') === tab ? '#F5F0E8' : 'transparent', border: 'none', borderBottom: (form._tab || 'caption') === tab ? '2px solid #1A1A1A' : '2px solid transparent', fontSize: 12, fontWeight: 600, color: (form._tab || 'caption') === tab ? '#1A1A1A' : '#8A8070', cursor: 'pointer', fontFamily: 'inherit', textTransform: 'uppercase', letterSpacing: 0.8 }}>
+              {tab === 'caption' ? 'Paste Caption' : '📷 Screenshot (iOS)'}
+            </button>
+          ))}
+        </div>
+        <div style={{ padding: '20px' }}>
+          {(form._tab || 'caption') === 'caption' ? (
+            <>
+              <textarea value={caption} onChange={e => setCaption(e.target.value)}
+                placeholder="Paste the recipe caption here and AI will extract the ingredients automatically..."
+                rows={4} style={{ ...inputStyle, resize: 'vertical', lineHeight: 1.6, marginBottom: 12 }} />
+              {extractError && (
+                <div style={{ fontSize: 13, color: '#8A8070', marginBottom: 10, borderLeft: '2px solid #D4CDB8', paddingLeft: 10 }}>{extractError}</div>
+              )}
+              <button onClick={handleExtract} disabled={extracting || !caption.trim()}
+                style={{ background: extracting || !caption.trim() ? '#B8B0A0' : '#1A1A1A', border: 'none', color: '#F5F0E8', padding: '10px 20px', fontSize: 13, fontWeight: 600, cursor: extracting || !caption.trim() ? 'default' : 'pointer', fontFamily: 'inherit' }}>
+                {extracting ? 'Extracting...' : 'Extract with AI'}
+              </button>
+            </>
+          ) : (
+            <>
+              <div style={{ fontSize: 13, color: '#8A8070', lineHeight: 1.6, marginBottom: 14 }}>
+                On Instagram, tap <strong style={{ color: '#1A1A1A' }}>···</strong> on a post → <strong style={{ color: '#1A1A1A' }}>Screenshot</strong> the caption, then upload it here.
+              </div>
+              <div onClick={() => screenshotRef.current.click()}
+                style={{ border: '1px dashed #D4CDB8', background: '#F5F0E8', cursor: 'pointer', height: 80, display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: 12 }}>
+                <span style={{ fontSize: 13, color: '#8A8070' }}>
+                  {extractingScreenshot ? 'Reading screenshot...' : 'Tap to upload screenshot'}
+                </span>
+              </div>
+              <input ref={screenshotRef} type="file" accept="image/*" style={{ display: 'none' }}
+                onChange={e => { if (e.target.files[0]) handleExtractFromScreenshot(e.target.files[0]); }} />
+              {extractError && (
+                <div style={{ fontSize: 13, color: '#8A8070', borderLeft: '2px solid #D4CDB8', paddingLeft: 10 }}>{extractError}</div>
+              )}
+            </>
+          )}
+        </div>
       </div>
 
       <div style={{ marginBottom: 20 }}>
