@@ -19,6 +19,7 @@ const SAMPLE_RECIPES = [
 function Sidebar({ open, onClose, active, onNavigate }) {
   const NAV = [
     { id: 'cookbook', label: 'Cookbook' },
+    { id: 'collections', label: 'Collections' },
     { id: 'mealplan', label: 'Meal Plan' },
     { id: 'grocery', label: 'Grocery List' },
     { id: 'add', label: 'Add Recipe' },
@@ -145,6 +146,17 @@ function RecipeModal({ recipe, onClose, onAddToGrocery, onEdit, onDelete, onNutr
             <div style={{ fontSize: 22, fontWeight: 700, color: '#1A1A1A', letterSpacing: -0.5 }}>{recipe.title}</div>
           </div>
           <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+            <button onClick={async () => {
+              const shareUrl = `${window.location.origin}/r/${recipe.share_id || recipe.id}`;
+              if (navigator.share) {
+                navigator.share({ title: recipe.title, url: shareUrl });
+              } else {
+                await navigator.clipboard.writeText(shareUrl);
+                alert('Link copied to clipboard!');
+              }
+            }} style={{ background: 'transparent', border: '1px solid #D4CDB8', color: '#8A8070', fontSize: 12, fontWeight: 600, cursor: 'pointer', padding: '5px 12px', fontFamily: 'inherit', letterSpacing: 0.2 }}>
+              Share
+            </button>
             <button onClick={() => { onEdit(recipe); onClose(); }}
               style={{ background: 'transparent', border: '1px solid #D4CDB8', color: '#8A8070', fontSize: 12, fontWeight: 600, cursor: 'pointer', padding: '5px 12px', fontFamily: 'inherit', letterSpacing: 0.2 }}>
               Edit
@@ -802,6 +814,126 @@ function GroceryView({ items, onClear, onToggle }) {
   );
 }
 
+function CollectionsView({ collections, recipes, selectedCollection, onSelectCollection, onCreateCollection, onDeleteCollection, onAddRecipeToCollection, onRemoveRecipeFromCollection, onShareCollection, onViewRecipe }) {
+  const [newName, setNewName] = useState('');
+  const [creating, setCreating] = useState(false);
+  const [showAddRecipe, setShowAddRecipe] = useState(false);
+  const [search, setSearch] = useState('');
+
+  const collectionRecipeIds = new Set((selectedCollection?.collection_recipes || []).map(r => r.recipe_id));
+  const collectionRecipes = recipes.filter(r => collectionRecipeIds.has(r.id));
+  const filteredAll = recipes.filter(r => r.title.toLowerCase().includes(search.toLowerCase()) && !collectionRecipeIds.has(r.id));
+
+  return (
+    <div style={{ maxWidth: 900, margin: '0 auto' }}>
+      <div style={{ marginBottom: 32 }}>
+        <div style={{ fontSize: 13, color: '#8A8070', marginBottom: 6 }}>{collections.length} collections</div>
+        <h1 style={{ fontSize: 32, fontWeight: 700, color: '#1A1A1A', letterSpacing: -1 }}>Collections</h1>
+      </div>
+
+      <div style={{ display: 'grid', gridTemplateColumns: selectedCollection ? '260px 1fr' : '1fr', gap: 24, alignItems: 'start' }}>
+        {/* Left: collection list */}
+        <div>
+          {/* Create new */}
+          {creating ? (
+            <div style={{ display: 'flex', gap: 8, marginBottom: 12 }}>
+              <input autoFocus value={newName} onChange={e => setNewName(e.target.value)}
+                onKeyDown={e => { if (e.key === 'Enter' && newName.trim()) { onCreateCollection(newName.trim()); setNewName(''); setCreating(false); } if (e.key === 'Escape') { setCreating(false); setNewName(''); } }}
+                placeholder="Collection name..." style={{ flex: 1, background: '#EDE8DC', border: '1px solid #1A1A1A', padding: '8px 12px', fontSize: 13, color: '#1A1A1A', outline: 'none', fontFamily: 'inherit' }} />
+              <button onClick={() => { if (newName.trim()) { onCreateCollection(newName.trim()); setNewName(''); setCreating(false); } }}
+                style={{ background: '#1A1A1A', border: 'none', color: '#F5F0E8', padding: '8px 14px', fontSize: 13, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit' }}>+</button>
+            </div>
+          ) : (
+            <button onClick={() => setCreating(true)}
+              style={{ width: '100%', padding: '10px 14px', background: 'transparent', border: '1px dashed #D4CDB8', color: '#8A8070', fontSize: 13, cursor: 'pointer', fontFamily: 'inherit', marginBottom: 12, textAlign: 'left' }}>
+              + New Collection
+            </button>
+          )}
+
+          {collections.length === 0 && !creating && (
+            <div style={{ fontSize: 13, color: '#B8B0A0', padding: '20px 0' }}>No collections yet</div>
+          )}
+
+          {collections.map(col => {
+            const count = (col.collection_recipes || []).length;
+            const isActive = selectedCollection?.id === col.id;
+            return (
+              <div key={col.id} onClick={() => onSelectCollection(isActive ? null : col)}
+                style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '10px 14px', marginBottom: 2, background: isActive ? '#1A1A1A' : '#EDE8DC', border: '1px solid', borderColor: isActive ? '#1A1A1A' : '#D4CDB8', cursor: 'pointer' }}>
+                <div>
+                  <div style={{ fontSize: 14, fontWeight: 600, color: isActive ? '#F5F0E8' : '#1A1A1A' }}>{col.name}</div>
+                  <div style={{ fontSize: 11, color: isActive ? '#B8B0A0' : '#8A8070', marginTop: 2 }}>{count} recipe{count !== 1 ? 's' : ''}</div>
+                </div>
+                <div style={{ display: 'flex', gap: 6 }} onClick={e => e.stopPropagation()}>
+                  <button onClick={() => onShareCollection(col)}
+                    style={{ background: 'transparent', border: `1px solid ${isActive ? '#555' : '#D4CDB8'}`, color: isActive ? '#B8B0A0' : '#8A8070', fontSize: 11, padding: '3px 8px', cursor: 'pointer', fontFamily: 'inherit' }}>
+                    Share
+                  </button>
+                  <button onClick={() => { if (confirm(`Delete "${col.name}"?`)) onDeleteCollection(col.id); }}
+                    style={{ background: 'transparent', border: 'none', color: isActive ? '#666' : '#B8B0A0', fontSize: 16, cursor: 'pointer', padding: '0 2px', lineHeight: 1 }}>×</button>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+
+        {/* Right: collection contents */}
+        {selectedCollection && (
+          <div>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
+              <div style={{ fontSize: 18, fontWeight: 700, color: '#1A1A1A' }}>{selectedCollection.name}</div>
+              <button onClick={() => setShowAddRecipe(v => !v)}
+                style={{ background: '#1A1A1A', border: 'none', color: '#F5F0E8', padding: '8px 14px', fontSize: 13, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit' }}>
+                {showAddRecipe ? 'Done' : '+ Add Recipe'}
+              </button>
+            </div>
+
+            {showAddRecipe && (
+              <div style={{ background: '#EDE8DC', border: '1px solid #D4CDB8', padding: 16, marginBottom: 20 }}>
+                <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Search recipes to add..."
+                  style={{ width: '100%', background: '#F5F0E8', border: '1px solid #D4CDB8', padding: '8px 12px', fontSize: 13, outline: 'none', fontFamily: 'inherit', boxSizing: 'border-box', marginBottom: 10 }} />
+                <div style={{ maxHeight: 220, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: 4 }}>
+                  {filteredAll.map(r => (
+                    <div key={r.id} onClick={() => onAddRecipeToCollection(selectedCollection.id, r.id)}
+                      style={{ padding: '8px 12px', background: '#F5F0E8', border: '1px solid #D4CDB8', cursor: 'pointer', fontSize: 13, color: '#1A1A1A', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                      <span>{r.title}</span>
+                      <span style={{ fontSize: 11, color: '#8A8070' }}>{r.category}</span>
+                    </div>
+                  ))}
+                  {filteredAll.length === 0 && <div style={{ fontSize: 13, color: '#B8B0A0' }}>All recipes already added</div>}
+                </div>
+              </div>
+            )}
+
+            {collectionRecipes.length === 0 ? (
+              <div style={{ fontSize: 13, color: '#B8B0A0', padding: '32px 0' }}>No recipes in this collection yet — add some above.</div>
+            ) : (
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: 2 }}>
+                {collectionRecipes.map(r => (
+                  <div key={r.id} style={{ position: 'relative' }}>
+                    <div onClick={() => onViewRecipe(r)} style={{ cursor: 'pointer' }}>
+                      <div style={{ height: 120, background: '#D4CDB8', overflow: 'hidden', position: 'relative' }}>
+                        {r.image_url ? <img src={r.image_url} alt={r.title} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                          : <div style={{ height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 24, color: '#B8B0A0' }}>▲</div>}
+                      </div>
+                      <div style={{ background: '#EDE8DC', border: '1px solid #D4CDB8', borderTop: 'none', padding: '10px 12px' }}>
+                        <div style={{ fontSize: 11, color: '#8A8070', textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 4 }}>{r.category}</div>
+                        <div style={{ fontSize: 13, fontWeight: 600, color: '#1A1A1A' }}>{r.title}</div>
+                      </div>
+                    </div>
+                    <button onClick={() => onRemoveRecipeFromCollection(selectedCollection.id, r.id)}
+                      style={{ position: 'absolute', top: 6, right: 6, background: 'rgba(26,26,26,0.7)', border: 'none', color: '#F5F0E8', width: 22, height: 22, fontSize: 14, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', lineHeight: 1 }}>×</button>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
 export default function App() {
   const [authChecked, setAuthChecked] = useState(false);
   const [sidebarOpen, setSidebarOpen] = useState(false);
@@ -824,6 +956,8 @@ export default function App() {
   const [sharedUrl, setSharedUrl] = useState('');
   const [extractingUrl, setExtractingUrl] = useState(false);
   const [extractUrlError, setExtractUrlError] = useState('');
+  const [collections, setCollections] = useState([]);
+  const [selectedCollection, setSelectedCollection] = useState(null);
 
   useEffect(() => {
     const init = async () => {
@@ -913,6 +1047,16 @@ export default function App() {
         // Profile doesn't exist yet — first login
         setShowWelcomeModal(true);
       }
+
+      // Load collections
+      try {
+        const { data: colData } = await supabase
+          .from('collections')
+          .select('*, collection_recipes(recipe_id)')
+          .eq('user_id', currentSession.user.id)
+          .order('created_at', { ascending: true });
+        if (colData) setCollections(colData);
+      } catch (e) { console.error('Collections load error:', e); }
 
       setLoading(false);
     };
@@ -1263,6 +1407,41 @@ export default function App() {
             )}
           </>
         )}
+        {view === 'collections' && <CollectionsView
+            collections={collections}
+            recipes={recipes}
+            selectedCollection={selectedCollection}
+            onSelectCollection={setSelectedCollection}
+            onCreateCollection={async (name) => {
+              const { data: { session: s } } = await supabase.auth.getSession();
+              if (!s) return;
+              const { data } = await supabase.from('collections').insert({ name, user_id: s.user.id }).select().single();
+              if (data) setCollections(prev => [...prev, { ...data, collection_recipes: [] }]);
+            }}
+            onDeleteCollection={async (id) => {
+              await supabase.from('collections').delete().eq('id', id);
+              setCollections(prev => prev.filter(c => c.id !== id));
+              if (selectedCollection?.id === id) setSelectedCollection(null);
+            }}
+            onAddRecipeToCollection={async (collectionId, recipeId) => {
+              const { error } = await supabase.from('collection_recipes').insert({ collection_id: collectionId, recipe_id: recipeId });
+              if (!error) setCollections(prev => prev.map(c => c.id === collectionId ? { ...c, collection_recipes: [...(c.collection_recipes || []), { recipe_id: recipeId }] } : c));
+            }}
+            onRemoveRecipeFromCollection={async (collectionId, recipeId) => {
+              await supabase.from('collection_recipes').delete().eq('collection_id', collectionId).eq('recipe_id', recipeId);
+              setCollections(prev => prev.map(c => c.id === collectionId ? { ...c, collection_recipes: (c.collection_recipes || []).filter(r => r.recipe_id !== recipeId) } : c));
+            }}
+            onShareCollection={async (collection) => {
+              const shareUrl = `${window.location.origin}/c/${collection.id}`;
+              if (navigator.share) {
+                navigator.share({ title: collection.name, url: shareUrl });
+              } else {
+                await navigator.clipboard.writeText(shareUrl);
+                alert('Collection link copied!');
+              }
+            }}
+            onViewRecipe={setSelectedRecipe}
+          />}
         {view === 'add' && <AddRecipeView onSave={handleSaveRecipe} onCancel={() => { setEditingRecipe(null); setView('cookbook'); }} session={session} editRecipe={editingRecipe} sharedUrl={sharedUrl} onClearSharedUrl={() => setSharedUrl('')} />}
         {view === 'mealplan' && <MealPlanView recipes={recipes} mealPlan={mealPlan} onAssign={handleAddToMealPlan} onAddWeekToGrocery={handleAddWeekToGrocery} onAddMealToGrocery={(recipe) => handleAddToGrocery(recipe, false)} onRemoveMealFromGrocery={handleRemoveRecipeFromGrocery} groceryItems={groceryItems} weekOffset={weekOffset} setWeekOffset={setWeekOffset} />}
         {view === 'grocery' && <GroceryView items={groceryItems} onClear={handleClearGrocery} onToggle={handleToggleGroceryItem} />}
