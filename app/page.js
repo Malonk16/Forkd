@@ -238,10 +238,10 @@ export default function LandingPage() {
         }
         .pricing-cards {
           display: flex; gap: 2px; justify-content: center;
-          flex-wrap: wrap; max-width: 760px; margin: 0 auto;
+          flex-wrap: wrap; max-width: 1060px; margin: 0 auto;
         }
         .pricing-card {
-          flex: 1; min-width: 280px; max-width: 360px;
+          flex: 1; min-width: 260px; max-width: 360px;
           border: 1px solid var(--cream-dark);
           padding: 48px 40px; text-align: left;
           background: var(--cream-mid);
@@ -460,9 +460,9 @@ export default function LandingPage() {
       <section className="pricing" id="pricing">
         <div style={{ maxWidth: 1100, margin: '0 auto' }}>
           <div className="section-label">Pricing</div>
-          <h2 className="section-title">Simple. No subscriptions.</h2>
-          <p className="pricing-sub">Try it free. Unlock everything once, keep it forever.</p>
-          <div className="pricing-cards">
+          <h2 className="section-title">Simple pricing. Cancel anytime.</h2>
+          <p className="pricing-sub">Start free, upgrade when you're ready.</p>
+          <div className="pricing-cards" style={{ maxWidth: 1060 }}>
             <div className="pricing-card">
               <div className="pricing-tier">Free</div>
               <div className="pricing-price">$0</div>
@@ -476,9 +476,9 @@ export default function LandingPage() {
               <a href="/login" className="btn-pricing btn-pricing-outline">Get started free</a>
             </div>
             <div className="pricing-card featured">
-              <div className="pricing-tier">Pro</div>
-              <div className="pricing-price">$24</div>
-              <div className="pricing-period">one-time payment — yours forever</div>
+              <div className="pricing-tier">Pro — Most Popular</div>
+              <div className="pricing-price">$4.99</div>
+              <div className="pricing-period">per month · cancel anytime</div>
               <ul className="pricing-features">
                 <li>Unlimited recipes</li>
                 <li>AI nutrition per recipe</li>
@@ -487,6 +487,19 @@ export default function LandingPage() {
                 <li>Priority support</li>
               </ul>
               <a href="/login" className="btn-pricing btn-pricing-filled">Get Pro →</a>
+            </div>
+            <div className="pricing-card">
+              <div className="pricing-tier">Team</div>
+              <div className="pricing-price">$12.99</div>
+              <div className="pricing-period">per month · up to 10 members</div>
+              <ul className="pricing-features">
+                <li>Everything in Pro</li>
+                <li>Shared cookbook</li>
+                <li>Collaborative meal planning</li>
+                <li>Shared grocery list</li>
+                <li>Up to 10 members</li>
+              </ul>
+              <a href="/login" className="btn-pricing btn-pricing-outline">Get Team →</a>
             </div>
           </div>
         </div>
