@@ -1,10 +1,10 @@
 {
   "name": "Forkd",
   "short_name": "Forkd",
-  "description": "Your fitness recipe cookbook — save, plan, and cook smarter.",
+  "description": "Your fitness recipe cookbook \u2014 save, plan, and cook smarter.",
   "start_url": "/",
   "display": "standalone",
-  "background_color": "#1A1A1A",
+  "background_color": "#F5F0E8",
   "theme_color": "#1A1A1A",
   "orientation": "portrait",
   "icons": [
@@ -20,5 +20,14 @@
       "type": "image/png",
       "purpose": "any maskable"
     }
-  ]
+  ],
+  "share_target": {
+    "action": "/share",
+    "method": "GET",
+    "params": {
+      "title": "title",
+      "text": "text",
+      "url": "url"
+    }
+  }
 }

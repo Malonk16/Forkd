@@ -265,7 +265,7 @@ function RecipeModal({ recipe, onClose, onAddToGrocery, onEdit, onDelete, onNutr
   );
 }
 
-function AddRecipeView({ onSave, onCancel, session, editRecipe }) {
+function AddRecipeView({ onSave, onCancel, session, editRecipe, sharedUrl, onClearSharedUrl }) {
   const [form, setForm] = useState(editRecipe ? {
     title: editRecipe.title || '',
     category: editRecipe.category || 'Dinner',
@@ -280,7 +280,44 @@ function AddRecipeView({ onSave, onCancel, session, editRecipe }) {
   const [imagePreview, setImagePreview] = useState(null);
   const [uploadingImage, setUploadingImage] = useState(false);
   const [extractError, setExtractError] = useState('');
+  const [extractingUrl, setExtractingUrl] = useState(false);
   const fileRef = useRef();
+
+  // Auto-extract when a sharedUrl is passed in
+  useEffect(() => {
+    if (sharedUrl) {
+      handleExtractFromUrl(sharedUrl);
+    }
+  }, [sharedUrl]);
+
+  const handleExtractFromUrl = async (url) => {
+    setExtractingUrl(true);
+    setExtractError('');
+    try {
+      const res = await fetch('/api/extract-url', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ url }),
+      });
+      const data = await res.json();
+      if (data.error) {
+        setExtractError('Could not extract recipe from this link. Try pasting the caption manually.');
+      } else if (data.title || data.ingredients) {
+        setForm(f => ({
+          ...f,
+          title: data.title || f.title,
+          ingredients: data.ingredients?.length ? data.ingredients : f.ingredients,
+          instructions: data.instructions || f.instructions,
+          source_url: url,
+          source_platform: data.platform || f.source_platform,
+        }));
+      }
+    } catch (e) {
+      setExtractError('Failed to extract from URL.');
+    }
+    setExtractingUrl(false);
+    if (onClearSharedUrl) onClearSharedUrl();
+  };
 
   const addIngredient = () => setForm(f => ({ ...f, ingredients: [...f.ingredients, { name: '', amount: '' }] }));
   const removeIngredient = (i) => setForm(f => ({ ...f, ingredients: f.ingredients.filter((_, idx) => idx !== i) }));
@@ -352,6 +389,11 @@ function AddRecipeView({ onSave, onCancel, session, editRecipe }) {
 
   return (
     <div style={{ maxWidth: 640, margin: '0 auto' }}>
+      {extractingUrl && (
+        <div style={{ padding: '12px 16px', background: '#EDE8DC', borderLeft: '2px solid #1A1A1A', marginBottom: 20, fontSize: 13, color: '#1A1A1A' }}>
+          Extracting recipe from shared link...
+        </div>
+      )}
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 40 }}>
         <h1 style={{ fontSize: 28, fontWeight: 700, color: '#1A1A1A', letterSpacing: -0.5 }}>{editRecipe ? 'Edit Recipe' : 'Add Recipe'}</h1>
         <button onClick={onCancel} style={{ background: 'transparent', border: '1px solid #D4CDB8', color: '#8A8070', padding: '8px 16px', fontSize: 13, cursor: 'pointer', fontFamily: 'inherit' }}>Cancel</button>
@@ -706,6 +748,9 @@ export default function App() {
   const [showFavoritesOnly, setShowFavoritesOnly] = useState(false);
   const [showWelcomeModal, setShowWelcomeModal] = useState(false);
   const [showTooltip, setShowTooltip] = useState(false);
+  const [sharedUrl, setSharedUrl] = useState('');
+  const [extractingUrl, setExtractingUrl] = useState(false);
+  const [extractUrlError, setExtractUrlError] = useState('');
 
   useEffect(() => {
     const init = async () => {
@@ -722,6 +767,21 @@ export default function App() {
       if (!currentSession) { window.location.href = '/login'; return; }
       setSession(currentSession);
       setAuthChecked(true);
+
+      // Handle Web Share Target
+      if (typeof window !== 'undefined') {
+        const sp = new URLSearchParams(window.location.search);
+        const shareUrl = sp.get('share');
+        const shareText = sp.get('sharetext');
+        if (shareUrl) {
+          setSharedUrl(shareUrl);
+          setView('add');
+          window.history.replaceState({}, '', '/');
+        } else if (shareText) {
+          setView('add');
+          window.history.replaceState({}, '', '/');
+        }
+      }
 
       // Load recipes
       try {
@@ -1103,7 +1163,7 @@ export default function App() {
             )}
           </>
         )}
-        {view === 'add' && <AddRecipeView onSave={handleSaveRecipe} onCancel={() => { setEditingRecipe(null); setView('cookbook'); }} session={session} editRecipe={editingRecipe} />}
+        {view === 'add' && <AddRecipeView onSave={handleSaveRecipe} onCancel={() => { setEditingRecipe(null); setView('cookbook'); }} session={session} editRecipe={editingRecipe} sharedUrl={sharedUrl} onClearSharedUrl={() => setSharedUrl('')} />}
         {view === 'mealplan' && <MealPlanView recipes={recipes} mealPlan={mealPlan} onAssign={handleAddToMealPlan} onAddWeekToGrocery={handleAddWeekToGrocery} onAddMealToGrocery={(recipe) => handleAddToGrocery(recipe, false)} onRemoveMealFromGrocery={handleRemoveRecipeFromGrocery} groceryItems={groceryItems} weekOffset={weekOffset} setWeekOffset={setWeekOffset} />}
         {view === 'grocery' && <GroceryView items={groceryItems} onClear={handleClearGrocery} onToggle={handleToggleGroceryItem} />}
       </div>
