@@ -961,12 +961,19 @@ export default function App() {
 
   useEffect(() => {
     const init = async () => {
-      console.log('init called, URL:', window.location.href);
       if (typeof window !== 'undefined') {
+        // Handle PKCE flow (?code= in query string)
         const params = new URLSearchParams(window.location.search);
         const code = params.get('code');
         if (code) {
           try { await supabase.auth.exchangeCodeForSession(code); } catch (e) { console.error(e); }
+          window.history.replaceState({}, '', '/app');
+        }
+
+        // Handle implicit flow (#access_token in hash)
+        const hash = window.location.hash;
+        if (hash && hash.includes('access_token')) {
+          try { await supabase.auth.getSession(); } catch (e) { console.error(e); }
           window.history.replaceState({}, '', '/app');
         }
       }
@@ -984,10 +991,10 @@ export default function App() {
         if (shareUrl) {
           setSharedUrl(shareUrl);
           setView('add');
-          window.history.replaceState({}, '', '/');
+          window.history.replaceState({}, '', '/app');
         } else if (shareText) {
           setView('add');
-          window.history.replaceState({}, '', '/');
+          window.history.replaceState({}, '', '/app');
         }
       }
 
