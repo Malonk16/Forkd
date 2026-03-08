@@ -441,10 +441,10 @@ function AddRecipeView({ onSave, onCancel, session, editRecipe, sharedUrl, onCle
       <div style={{ background: '#EDE8DC', border: '1px solid #D4CDB8', marginBottom: 28 }}>
         {/* Tabs */}
         <div style={{ display: 'flex', borderBottom: '1px solid #D4CDB8' }}>
-          {['caption', 'screenshot'].map(tab => (
-            <button key={tab} onClick={() => setForm(f => ({ ...f, _tab: tab }))}
-              style={{ flex: 1, padding: '12px', background: (form._tab || 'caption') === tab ? '#F5F0E8' : 'transparent', border: 'none', borderBottom: (form._tab || 'caption') === tab ? '2px solid #1A1A1A' : '2px solid transparent', fontSize: 12, fontWeight: 600, color: (form._tab || 'caption') === tab ? '#1A1A1A' : '#8A8070', cursor: 'pointer', fontFamily: 'inherit', textTransform: 'uppercase', letterSpacing: 0.8 }}>
-              {tab === 'caption' ? 'Paste Caption' : '📷 Screenshot (iOS)'}
+          {[{ key: 'caption', label: 'Paste Caption' }, { key: 'screenshot', label: '📷 Screenshot' }].map(tab => (
+            <button key={tab.key} onClick={() => setForm(f => ({ ...f, _tab: tab.key }))}
+              style={{ flex: 1, padding: '12px 8px', background: (form._tab || 'caption') === tab.key ? '#F5F0E8' : 'transparent', border: 'none', borderBottom: (form._tab || 'caption') === tab.key ? '2px solid #1A1A1A' : '2px solid transparent', fontSize: 11, fontWeight: 600, color: (form._tab || 'caption') === tab.key ? '#1A1A1A' : '#8A8070', cursor: 'pointer', fontFamily: 'inherit', textTransform: 'uppercase', letterSpacing: 0.5, whiteSpace: 'nowrap', minWidth: 0 }}>
+              {tab.label}
             </button>
           ))}
         </div>
