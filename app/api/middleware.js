@@ -1,45 +1,32 @@
 import { createClient } from '@supabase/supabase-js';
 
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL,
-  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
-);
-
-// Rate limiting store (in-memory, resets on cold start)
 const rateLimitStore = new Map();
-const RATE_LIMIT = 20; // requests per window
-const RATE_WINDOW = 60 * 1000; // 1 minute
+const RATE_LIMIT = 20;
+const RATE_WINDOW = 60 * 1000;
 
 export async function verifyAuth(request) {
+  const supabase = createClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
+  );
   const authHeader = request.headers.get('Authorization');
   if (!authHeader || !authHeader.startsWith('Bearer ')) {
     return { user: null, error: 'Missing authorization header' };
   }
-
   const token = authHeader.replace('Bearer ', '');
   const { data: { user }, error } = await supabase.auth.getUser(token);
-
-  if (error || !user) {
-    return { user: null, error: 'Invalid or expired token' };
-  }
-
+  if (error || !user) return { user: null, error: 'Invalid or expired token' };
   return { user, error: null };
 }
 
 export function checkRateLimit(userId) {
   const now = Date.now();
-  const key = userId;
-  const record = rateLimitStore.get(key);
-
+  const record = rateLimitStore.get(userId);
   if (!record || now - record.start > RATE_WINDOW) {
-    rateLimitStore.set(key, { start: now, count: 1 });
+    rateLimitStore.set(userId, { start: now, count: 1 });
     return { allowed: true, remaining: RATE_LIMIT - 1 };
   }
-
-  if (record.count >= RATE_LIMIT) {
-    return { allowed: false, remaining: 0 };
-  }
-
+  if (record.count >= RATE_LIMIT) return { allowed: false, remaining: 0 };
   record.count++;
   return { allowed: true, remaining: RATE_LIMIT - record.count };
 }

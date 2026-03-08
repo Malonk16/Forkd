@@ -1,20 +1,28 @@
 import { createClient } from '@supabase/supabase-js';
-import { verifyAuth, validateOrigin, unauthorizedResponse, forbiddenResponse } from '../middleware';
-
-// Admin client — uses service role key to delete auth users
-const supabaseAdmin = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL,
-  process.env.SUPABASE_SERVICE_ROLE_KEY
-);
 
 export async function POST(request) {
   try {
-    if (!validateOrigin(request)) return forbiddenResponse();
+    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+    const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+    const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
 
-    const { user, error: authError } = await verifyAuth(request);
-    if (authError || !user) return unauthorizedResponse(authError);
+    if (!supabaseUrl || !supabaseAnonKey || !serviceRoleKey) {
+      return Response.json({ error: 'Server configuration error' }, { status: 500 });
+    }
 
-    // Delete the auth user — cascades everything linked to auth.users
+    const authHeader = request.headers.get('Authorization');
+    if (!authHeader || !authHeader.startsWith('Bearer ')) {
+      return Response.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
+    const token = authHeader.replace('Bearer ', '');
+    const supabase = createClient(supabaseUrl, supabaseAnonKey);
+    const { data: { user }, error: authError } = await supabase.auth.getUser(token);
+    if (authError || !user) {
+      return Response.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
+    const supabaseAdmin = createClient(supabaseUrl, serviceRoleKey);
     const { error } = await supabaseAdmin.auth.admin.deleteUser(user.id);
     if (error) {
       console.error('Delete user error:', error);
