@@ -961,12 +961,13 @@ export default function App() {
 
   useEffect(() => {
     const init = async () => {
+      console.log('init called, URL:', window.location.href);
       if (typeof window !== 'undefined') {
         const params = new URLSearchParams(window.location.search);
         const code = params.get('code');
         if (code) {
           try { await supabase.auth.exchangeCodeForSession(code); } catch (e) { console.error(e); }
-          window.history.replaceState({}, '', '/');
+          window.history.replaceState({}, '', '/app');
         }
       }
 
