@@ -921,10 +921,17 @@ export default function App() {
 
   const handleSaveRecipe = async (form, editId) => {
     if (!session) return;
+    // Strip any UI-only state keys before sending to Supabase
+    const { _tab, ...cleanForm } = form;
     if (editId) {
-      await handleUpdateRecipe(form, editId);
+      await handleUpdateRecipe(cleanForm, editId);
     } else {
-      const { data } = await supabase.from('recipes').insert({ ...form, user_id: session.user.id }).select().single();
+      const { data, error } = await supabase.from('recipes').insert({ ...cleanForm, user_id: session.user.id }).select().single();
+      if (error) {
+        console.error('Save error:', error);
+        alert('Failed to save recipe: ' + error.message);
+        return;
+      }
       if (data) { setRecipes(prev => [data, ...prev.filter(r => typeof r.id !== 'number')]); setUsingDemo(false); }
       setView('cookbook');
     }
@@ -932,10 +939,10 @@ export default function App() {
 
   const handleUpdateRecipe = async (form, id) => {
     if (!session || !id) return;
-    const { data } = await supabase.from('recipes').update(form).eq('id', id).select().single();
-    if (data) {
-      setRecipes(prev => prev.map(r => r.id === id ? data : r));
-    }
+    const { _tab, ...cleanForm } = form;
+    const { data, error } = await supabase.from('recipes').update(cleanForm).eq('id', id).select().single();
+    if (error) { console.error('Update error:', error); alert('Failed to update recipe: ' + error.message); return; }
+    if (data) { setRecipes(prev => prev.map(r => r.id === id ? data : r)); }
     setEditingRecipe(null);
     setView('cookbook');
   };
