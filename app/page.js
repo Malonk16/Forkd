@@ -920,19 +920,28 @@ export default function App() {
   }, []);
 
   const handleSaveRecipe = async (form, editId) => {
-    if (!session) return;
-    // Strip any UI-only state keys before sending to Supabase
+    // Re-fetch session in case it expired
+    const { data: { session: currentSession } } = await supabase.auth.getSession();
+    const activeSession = currentSession || session;
+    if (!activeSession) { alert('Not logged in — please refresh and log in again.'); return; }
+
     const { _tab, ...cleanForm } = form;
     if (editId) {
       await handleUpdateRecipe(cleanForm, editId);
     } else {
-      const { data, error } = await supabase.from('recipes').insert({ ...cleanForm, user_id: session.user.id }).select().single();
+      const { data, error } = await supabase.from('recipes')
+        .insert({ ...cleanForm, user_id: activeSession.user.id })
+        .select()
+        .single();
       if (error) {
-        console.error('Save error:', error);
-        alert('Failed to save recipe: ' + error.message);
+        alert('Save failed: ' + error.message);
+        console.error('Save error:', JSON.stringify(error));
         return;
       }
-      if (data) { setRecipes(prev => [data, ...prev.filter(r => typeof r.id !== 'number')]); setUsingDemo(false); }
+      if (data) {
+        setRecipes(prev => [data, ...prev.filter(r => typeof r.id !== 'number')]);
+        setUsingDemo(false);
+      }
       setView('cookbook');
     }
   };
